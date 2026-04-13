@@ -88,6 +88,11 @@ The frontend intercepts these requests automatically using standard `axios` conf
 
 ## 7. What I'd Do With More Time
 *   **E2E Testing:** Playwright or Cypress workflows to guarantee user actions against the mock system match requirements. Left out intentionally to stay within reasonable time limits while still keeping strong internal typing (TypeScript) throughout.
+*   **Sprint Planning:** A dedicated sprint board with configurable time-boxed sprints, backlog drag-in, capacity indicators, and a burndown chart — enabling proper agile workflow on top of the existing kanban columns.
+*   **Role-Based Access Control:** Project-level roles (Owner, Member, Viewer) enforced both in the UI (hiding destructive actions) and at the API layer, so teams can safely collaborate without accidental data loss.
+*   **Task History & Audit Log:** A chronological activity feed per task recording every field change, status transition, and comment — surfaced in the task detail sidebar so teams have full visibility into how work progressed.
+*   **Epics & Hierarchy:** An Epic container that groups related tasks with its own progress rollup. A "holding area" / backlog column for tasks not yet assigned to a sprint or epic, keeping the active board clean.
+*   **Clone Tasks & Blocking Links:** One-click task cloning to duplicate boilerplate tasks, plus blocking/blocked-by relationships between tasks rendered as dependency indicators on the board and in the detail view.
+*   **GitHub Integration:** Linking a task to a pull request or branch via the GitHub API — showing PR status (open / merged / closed) directly on the task card and auto-transitioning task status when a PR merges.
 *   **Websockets / Real-time:** If backed by a real server, implementing optimistic event streams using `socket.io` or SSE to push board updates to all clients viewing the same project would be the top priority.
-*   **Accessibility (a11y):** Further refinement with precise ARIA labels and stricter keyboard navigation — especially around modals and the drag-and-drop area — would significantly improve the experience in real-world environments.
 *   **Pagination / Virtual Lists:** For projects with many tasks, windowed rendering (e.g. `react-virtual`) and cursor-based pagination on the tasks endpoint would be needed to keep the board performant at scale.
