@@ -1,4 +1,4 @@
-import { http, HttpResponse } from 'msw';
+import { http, HttpResponse, delay } from 'msw';
 import { v4 as uuidv4 } from 'uuid';
 import { users, passwords, projects, tasks } from './db';
 import type { Task } from '../types';
@@ -22,6 +22,7 @@ function makeToken(id: string, email: string): string {
 export const handlers = [
   // ─── POST /auth/register ───────────────────────────────────────────────
   http.post('http://localhost:4000/auth/register', async ({ request }) => {
+    await delay(500);
     const body = (await request.json()) as { name?: string; email?: string; password?: string };
 
     const fields: Record<string, string> = {};
@@ -54,6 +55,7 @@ export const handlers = [
 
   // ─── POST /auth/login ──────────────────────────────────────────────────
   http.post('http://localhost:4000/auth/login', async ({ request }) => {
+    await delay(500);
     const body = (await request.json()) as { email?: string; password?: string };
 
     const user = users.find((u) => u.email === body.email);
@@ -66,7 +68,8 @@ export const handlers = [
   }),
 
   // ─── GET /projects ─────────────────────────────────────────────────────
-  http.get('http://localhost:4000/projects', ({ request }) => {
+  http.get('http://localhost:4000/projects', async ({ request }) => {
+    await delay(500);
     const auth = getUserFromRequest(request);
     if (!auth) return HttpResponse.json({ error: 'unauthorized' }, { status: 401 });
 
@@ -80,19 +83,27 @@ export const handlers = [
 
   // ─── POST /projects ────────────────────────────────────────────────────
   http.post('http://localhost:4000/projects', async ({ request }) => {
+    await delay(500);
     const auth = getUserFromRequest(request);
     if (!auth) return HttpResponse.json({ error: 'unauthorized' }, { status: 401 });
 
-    const body = (await request.json()) as { name?: string; description?: string };
+    const body = (await request.json()) as { name?: string; description?: string; code?: string };
     if (!body.name) {
       return HttpResponse.json(
         { error: 'validation failed', fields: { name: 'is required' } },
         { status: 400 },
       );
     }
+    if (!body.code) {
+      return HttpResponse.json(
+        { error: 'validation failed', fields: { code: 'is required' } },
+        { status: 400 },
+      );
+    }
 
     const project = {
       id: uuidv4(),
+      code: body.code.toUpperCase(),
       name: body.name,
       description: body.description,
       owner_id: auth.id,
@@ -103,23 +114,25 @@ export const handlers = [
   }),
 
   // ─── GET /projects/:id ────────────────────────────────────────────────
-  http.get('http://localhost:4000/projects/:id', ({ request, params }) => {
+  http.get('http://localhost:4000/projects/:id', async ({ request, params }) => {
+    await delay(500);
     const auth = getUserFromRequest(request);
     if (!auth) return HttpResponse.json({ error: 'unauthorized' }, { status: 401 });
 
-    const project = projects.find((p) => p.id === params.id);
+    const project = projects.find((p) => p.id === params.id || p.code === (typeof params.id === 'string' ? params.id.toUpperCase() : params.id));
     if (!project) return HttpResponse.json({ error: 'not found' }, { status: 404 });
 
-    const projectTasks = tasks.filter((t) => t.project_id === params.id);
+    const projectTasks = tasks.filter((t) => t.project_id === project.id);
     return HttpResponse.json({ ...project, tasks: projectTasks });
   }),
 
   // ─── PATCH /projects/:id ──────────────────────────────────────────────
   http.patch('http://localhost:4000/projects/:id', async ({ request, params }) => {
+    await delay(500);
     const auth = getUserFromRequest(request);
     if (!auth) return HttpResponse.json({ error: 'unauthorized' }, { status: 401 });
 
-    const idx = projects.findIndex((p) => p.id === params.id);
+    const idx = projects.findIndex((p) => p.id === params.id || p.code === (typeof params.id === 'string' ? params.id.toUpperCase() : params.id));
     if (idx === -1) return HttpResponse.json({ error: 'not found' }, { status: 404 });
     if (projects[idx].owner_id !== auth.id) {
       return HttpResponse.json({ error: 'forbidden' }, { status: 403 });
@@ -131,20 +144,22 @@ export const handlers = [
   }),
 
   // ─── DELETE /projects/:id ─────────────────────────────────────────────
-  http.delete('http://localhost:4000/projects/:id', ({ request, params }) => {
+  http.delete('http://localhost:4000/projects/:id', async ({ request, params }) => {
+    await delay(500);
     const auth = getUserFromRequest(request);
     if (!auth) return HttpResponse.json({ error: 'unauthorized' }, { status: 401 });
 
-    const idx = projects.findIndex((p) => p.id === params.id);
+    const idx = projects.findIndex((p) => p.id === params.id || p.code === (typeof params.id === 'string' ? params.id.toUpperCase() : params.id));
     if (idx === -1) return HttpResponse.json({ error: 'not found' }, { status: 404 });
     if (projects[idx].owner_id !== auth.id) {
       return HttpResponse.json({ error: 'forbidden' }, { status: 403 });
     }
 
+    const projectId = projects[idx].id;
     projects.splice(idx, 1);
     // also delete all tasks belonging to this project
     const toRemove = tasks
-      .map((t, i) => (t.project_id === params.id ? i : -1))
+      .map((t, i) => (t.project_id === projectId ? i : -1))
       .filter((i) => i !== -1)
       .reverse();
     toRemove.forEach((i) => tasks.splice(i, 1));
@@ -153,25 +168,38 @@ export const handlers = [
   }),
 
   // ─── GET /projects/:id/tasks ──────────────────────────────────────────
-  http.get('http://localhost:4000/projects/:id/tasks', ({ request, params }) => {
+  http.get('http://localhost:4000/projects/:id/tasks', async ({ request, params }) => {
+    await delay(500);
     const auth = getUserFromRequest(request);
     if (!auth) return HttpResponse.json({ error: 'unauthorized' }, { status: 401 });
+
+    const project = projects.find((p) => p.id === params.id || p.code === (typeof params.id === 'string' ? params.id.toUpperCase() : params.id));
+    if (!project) return HttpResponse.json({ error: 'not found' }, { status: 404 });
 
     const url = new URL(request.url);
     const statusFilter = url.searchParams.get('status');
     const assigneeFilter = url.searchParams.get('assignee');
+    const labelFilter = url.searchParams.get('label');
 
-    let result = tasks.filter((t) => t.project_id === params.id);
+    let result = tasks.filter((t) => t.project_id === project.id);
     if (statusFilter) result = result.filter((t) => t.status === statusFilter);
     if (assigneeFilter) result = result.filter((t) => t.assignee_id === assigneeFilter);
+    if (labelFilter) {
+      const lowerLabel = labelFilter.toLowerCase();
+      result = result.filter((t) => t.labels?.some((l) => l.toLowerCase().includes(lowerLabel)));
+    }
 
     return HttpResponse.json({ tasks: result });
   }),
 
   // ─── POST /projects/:id/tasks ─────────────────────────────────────────
   http.post('http://localhost:4000/projects/:id/tasks', async ({ request, params }) => {
+    await delay(500);
     const auth = getUserFromRequest(request);
     if (!auth) return HttpResponse.json({ error: 'unauthorized' }, { status: 401 });
+
+    const project = projects.find((p) => p.id === params.id || p.code === (typeof params.id === 'string' ? params.id.toUpperCase() : params.id));
+    if (!project) return HttpResponse.json({ error: 'not found' }, { status: 404 });
 
     const body = (await request.json()) as Partial<Task>;
     if (!body.title) {
@@ -181,13 +209,19 @@ export const handlers = [
       );
     }
 
+    const projectTasks = tasks.filter((t) => t.project_id === project.id);
+    const nextNum = projectTasks.length + 1;
+    const task_key = `${project.code}-${nextNum}`;
+
     const task: Task = {
       id: uuidv4(),
+      task_key,
       title: body.title,
       description: body.description,
+      labels: body.labels ?? [],
       status: body.status ?? 'todo',
       priority: body.priority ?? 'medium',
-      project_id: params.id as string,
+      project_id: project.id,
       assignee_id: body.assignee_id,
       due_date: body.due_date,
       created_at: new Date().toISOString(),
@@ -197,12 +231,25 @@ export const handlers = [
     return HttpResponse.json(task, { status: 201 });
   }),
 
-  // ─── PATCH /tasks/:id ─────────────────────────────────────────────────
-  http.patch('http://localhost:4000/tasks/:id', async ({ request, params }) => {
+  // ─── GET /tasks/:id ───────────────────────────────────────────────────
+  http.get('http://localhost:4000/tasks/:id', async ({ request, params }) => {
+    await delay(500);
     const auth = getUserFromRequest(request);
     if (!auth) return HttpResponse.json({ error: 'unauthorized' }, { status: 401 });
 
-    const idx = tasks.findIndex((t) => t.id === params.id);
+    const task = tasks.find((t) => t.id === params.id || t.task_key === (typeof params.id === 'string' ? params.id.toUpperCase() : params.id));
+    if (!task) return HttpResponse.json({ error: 'not found' }, { status: 404 });
+
+    return HttpResponse.json(task);
+  }),
+
+  // ─── PATCH /tasks/:id ─────────────────────────────────────────────────
+  http.patch('http://localhost:4000/tasks/:id', async ({ request, params }) => {
+    await delay(500);
+    const auth = getUserFromRequest(request);
+    if (!auth) return HttpResponse.json({ error: 'unauthorized' }, { status: 401 });
+
+    const idx = tasks.findIndex((t) => t.id === params.id || t.task_key === (typeof params.id === 'string' ? params.id.toUpperCase() : params.id));
     if (idx === -1) return HttpResponse.json({ error: 'not found' }, { status: 404 });
 
     const body = (await request.json()) as Partial<Task>;
@@ -211,11 +258,12 @@ export const handlers = [
   }),
 
   // ─── DELETE /tasks/:id ────────────────────────────────────────────────
-  http.delete('http://localhost:4000/tasks/:id', ({ request, params }) => {
+  http.delete('http://localhost:4000/tasks/:id', async ({ request, params }) => {
+    await delay(500);
     const auth = getUserFromRequest(request);
     if (!auth) return HttpResponse.json({ error: 'unauthorized' }, { status: 401 });
 
-    const idx = tasks.findIndex((t) => t.id === params.id);
+    const idx = tasks.findIndex((t) => t.id === params.id || t.task_key === (typeof params.id === 'string' ? params.id.toUpperCase() : params.id));
     if (idx === -1) return HttpResponse.json({ error: 'not found' }, { status: 404 });
 
     tasks.splice(idx, 1);

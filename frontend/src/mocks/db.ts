@@ -26,6 +26,7 @@ export const passwords: Record<string, string> = {
 export const projects: Project[] = [
   {
     id: 'proj-seed-1',
+    code: 'WEB',
     name: 'Website Redesign',
     description: 'Revamp the company landing page for Q2 launch',
     owner_id: 'user-seed-1',
@@ -33,6 +34,7 @@ export const projects: Project[] = [
   },
   {
     id: 'proj-seed-2',
+    code: 'MVP',
     name: 'Mobile App MVP',
     description: 'iOS and Android launch for the core product',
     owner_id: 'user-seed-1',
@@ -44,8 +46,10 @@ export const projects: Project[] = [
 export const tasks: Task[] = [
   {
     id: 'task-seed-1',
+    task_key: 'WEB-1',
     title: 'Design the hero section',
     description: 'Create high-fidelity mockups for the hero banner',
+    labels: ['design', 'q2'],
     status: 'done',
     priority: 'high',
     project_id: 'proj-seed-1',
@@ -56,8 +60,10 @@ export const tasks: Task[] = [
   },
   {
     id: 'task-seed-2',
+    task_key: 'WEB-2',
     title: 'Implement navigation menu',
     description: 'Build responsive nav with mobile hamburger toggle',
+    labels: ['frontend'],
     status: 'in_progress',
     priority: 'medium',
     project_id: 'proj-seed-1',
@@ -68,8 +74,10 @@ export const tasks: Task[] = [
   },
   {
     id: 'task-seed-3',
+    task_key: 'WEB-3',
     title: 'Write copy for About page',
     description: 'Draft and review content for the team & mission section',
+    labels: ['content'],
     status: 'todo',
     priority: 'low',
     project_id: 'proj-seed-1',

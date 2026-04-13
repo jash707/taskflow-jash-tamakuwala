@@ -10,6 +10,7 @@ export interface User {
 
 export interface Project {
   id: string;
+  code: string;
   name: string;
   description?: string;
   owner_id: string;
@@ -18,10 +19,12 @@ export interface Project {
 
 export interface Task {
   id: string;
+  task_key: string;
   title: string;
   description?: string;
   status: Status;
   priority: Priority;
+  labels?: string[];
   project_id: string;
   assignee_id?: string;
   due_date?: string;

@@ -1,28 +1,60 @@
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../hooks/useAuth';
-import { LogOut, CheckSquare, Moon, Sun } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../../hooks/useAuth";
+import { LogOut, CheckSquare, Moon, Sun, Plus } from "lucide-react";
+import { useEffect, useState } from "react";
+import { TaskModal } from "../tasks/TaskModal";
+import { useToast } from "../../context/ToastContext";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
+import { users } from "../../mocks/db";
+import api from "../../lib/axios";
+import type { Task } from "../../types";
 
 export function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [dark, setDark] = useState(() => localStorage.getItem('tf_theme') === 'dark');
+  const [dark, setDark] = useState(
+    () => localStorage.getItem("tf_theme") === "dark",
+  );
+  const [taskModalOpen, setTaskModalOpen] = useState(false);
+  const { showToast } = useToast();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     const root = document.documentElement;
     if (dark) {
-      root.classList.add('dark');
-      localStorage.setItem('tf_theme', 'dark');
+      root.classList.add("dark");
+      localStorage.setItem("tf_theme", "dark");
     } else {
-      root.classList.remove('dark');
-      localStorage.setItem('tf_theme', 'light');
+      root.classList.remove("dark");
+      localStorage.setItem("tf_theme", "light");
     }
   }, [dark]);
 
-
   function handleLogout() {
     logout();
-    navigate('/login');
+    navigate("/login");
+  }
+
+  const createMutation = useMutation({
+    mutationFn: async (payload: Partial<Task>) => {
+      const { data } = await api.post(
+        `/projects/${payload.project_id}/tasks`,
+        payload,
+      );
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["tasks", data.project_id] });
+      showToast({
+        title: "Task created successfully",
+        linkTo: `/tasks/${data.task_key}`,
+        linkLabel: "Open task",
+      });
+    },
+  });
+
+  async function handleCreateTask(payload: Partial<Task>) {
+    await createMutation.mutateAsync(payload);
   }
 
   return (
@@ -51,13 +83,19 @@ export function Navbar() {
 
           {user && (
             <>
-              {/* User avatar */}
+              <button
+                onClick={() => setTaskModalOpen(true)}
+                className="btn-primary text-xs py-1.5 px-3 mr-2 hidden sm:flex"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Create Task
+              </button>
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800">
                 <div className="w-6 h-6 rounded-full bg-brand-500 flex items-center justify-center text-white text-xs font-semibold">
-                  {user.name.charAt(0).toUpperCase()}
+                  {user.name ? user.name.charAt(0).toUpperCase() : "U"}
                 </div>
                 <span className="text-sm font-medium text-slate-700 dark:text-slate-200 hidden sm:block">
-                  {user.name}
+                  {user.name || "User"}
                 </span>
               </div>
 
@@ -73,6 +111,14 @@ export function Navbar() {
           )}
         </div>
       </div>
+
+      {taskModalOpen && (
+        <TaskModal
+          members={users}
+          onClose={() => setTaskModalOpen(false)}
+          onSave={handleCreateTask}
+        />
+      )}
     </header>
   );
 }

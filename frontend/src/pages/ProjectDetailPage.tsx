@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, AlertCircle, Filter } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { useTasks } from '../hooks/useTasks';
 import { TaskBoard } from '../components/tasks/TaskBoard';
 import { users } from '../mocks/db';
-import type { Status } from '../types';
+import type { Status, Project } from '../types';
+import api from '../lib/axios';
 
 function PageSkeleton() {
   return (
@@ -29,10 +31,27 @@ export function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [statusFilter, setStatusFilter] = useState<Status | ''>('');
   const [assigneeFilter, setAssigneeFilter] = useState('');
+  const [labelFilter, setLabelFilter] = useState('');
+  const [debouncedLabelFilter, setDebouncedLabelFilter] = useState('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedLabelFilter(labelFilter), 300);
+    return () => clearTimeout(timer);
+  }, [labelFilter]);
+  
+  const { data: project } = useQuery<Project>({
+    queryKey: ['project', id],
+    queryFn: async () => {
+      const { data } = await api.get(`/projects/${id}`);
+      return data;
+    },
+    enabled: !!id,
+  });
 
   const { tasks, isLoading, error, createTask, updateTask, deleteTask } = useTasks(id!, {
     status: statusFilter as Status | undefined,
     assignee: assigneeFilter || undefined,
+    label: debouncedLabelFilter || undefined,
   });
 
   if (isLoading) return <PageSkeleton />;
@@ -54,8 +73,10 @@ export function ProjectDetailPage() {
           <ArrowLeft className="w-4 h-4" />
         </Link>
         <div>
-          <p className="text-xs text-slate-400 dark:text-slate-500 mb-0.5">Projects</p>
-          <h1 className="text-xl font-bold text-slate-900 dark:text-white">Project Board</h1>
+          <p className="text-xs text-slate-400 dark:text-slate-500 mb-0.5">Projects / {project?.code}</p>
+          <h1 className="text-xl font-bold text-slate-900 dark:text-white">
+            {project ? project.name : 'Loading project...'}
+          </h1>
         </div>
       </div>
 
@@ -92,10 +113,18 @@ export function ProjectDetailPage() {
           ))}
         </select>
 
-        {(statusFilter || assigneeFilter) && (
+        <input
+          id="filter-label"
+          className="input w-auto text-sm py-1.5 min-w-[120px]"
+          placeholder="Filter by label..."
+          value={labelFilter}
+          onChange={(e) => setLabelFilter(e.target.value)}
+        />
+
+        {(statusFilter || assigneeFilter || labelFilter) && (
           <button
             className="text-xs text-brand-600 dark:text-brand-400 hover:underline"
-            onClick={() => { setStatusFilter(''); setAssigneeFilter(''); }}
+            onClick={() => { setStatusFilter(''); setAssigneeFilter(''); setLabelFilter(''); setDebouncedLabelFilter(''); }}
           >
             Clear filters
           </button>

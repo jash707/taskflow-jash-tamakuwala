@@ -98,7 +98,7 @@ export function ProjectsPage() {
         <ProjectModal
           onClose={() => setShowModal(false)}
           onSubmit={editTarget
-            ? (name, desc) => updateProject(editTarget.id, name, desc)
+            ? (name, desc, code) => updateProject(editTarget.id, name, desc, code)
             : createProject
           }
           initial={editTarget}

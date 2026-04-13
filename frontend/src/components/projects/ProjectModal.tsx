@@ -1,12 +1,16 @@
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { X, Loader2 } from 'lucide-react';
-import type { Project } from '../../types';
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { X, Loader2 } from "lucide-react";
+import type { Project } from "../../types";
 
 const schema = z.object({
-  name: z.string().min(1, 'Project name is required'),
+  name: z.string().min(1, "Project name is required"),
+  code: z
+    .string()
+    .min(1, "Code is required")
+    .regex(/^[A-Z0-9]+$/, "Must be ALL CAPS alphanumeric (e.g. CORE)"),
   description: z.string().optional(),
 });
 
@@ -14,12 +18,16 @@ type FormData = z.infer<typeof schema>;
 
 interface Props {
   onClose: () => void;
-  onSubmit: (name: string, description?: string) => Promise<Project>;
+  onSubmit: (
+    name: string,
+    description?: string,
+    code?: string,
+  ) => Promise<Project>;
   initial?: Project;
 }
 
 export function ProjectModal({ onClose, onSubmit, initial }: Props) {
-  const [serverError, setServerError] = useState('');
+  const [serverError, setServerError] = useState("");
 
   const {
     register,
@@ -27,16 +35,21 @@ export function ProjectModal({ onClose, onSubmit, initial }: Props) {
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { name: initial?.name ?? '', description: initial?.description ?? '' },
+    defaultValues: {
+      name: initial?.name ?? "",
+      description: initial?.description ?? "",
+      code: initial?.code ?? "",
+    },
+    mode: "onChange",
   });
 
   async function handleSave(data: FormData) {
-    setServerError('');
+    setServerError("");
     try {
-      await onSubmit(data.name, data.description);
+      await onSubmit(data.name, data.description, data.code);
       onClose();
     } catch {
-      setServerError('Failed to save project. Please try again.');
+      setServerError("Failed to save project. Please try again.");
     }
   }
 
@@ -52,7 +65,7 @@ export function ProjectModal({ onClose, onSubmit, initial }: Props) {
       <div className="relative w-full max-w-md card p-6 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-200">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
-            {initial ? 'Edit Project' : 'New Project'}
+            {initial ? "Edit Project" : "New Project"}
           </h2>
           <button
             id="close-project-modal"
@@ -71,24 +84,46 @@ export function ProjectModal({ onClose, onSubmit, initial }: Props) {
 
         <form onSubmit={handleSubmit(handleSave)} className="space-y-4">
           <div>
-            <label htmlFor="project-name" className="label">Project name *</label>
+            <label htmlFor="project-name" className="label">
+              Project name *
+            </label>
             <input
               id="project-name"
-              className={`input ${errors.name ? 'border-red-400' : ''}`}
+              className={`input ${errors.name ? "border-red-400" : ""}`}
               placeholder="e.g. Website Redesign"
-              {...register('name')}
+              {...register("name")}
             />
-            {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name.message}</p>}
+            {errors.name && (
+              <p className="mt-1 text-xs text-red-500">{errors.name.message}</p>
+            )}
           </div>
 
           <div>
-            <label htmlFor="project-description" className="label">Description</label>
+            <label htmlFor="project-code" className="label">
+              Project Code (e.g. CORE) *
+            </label>
+            <input
+              id="project-code"
+              className={`input ${errors.code ? "border-red-400" : ""}`}
+              placeholder="e.g. CORE"
+              disabled={!!initial}
+              {...register("code")}
+            />
+            {errors.code && (
+              <p className="mt-1 text-xs text-red-500">{errors.code.message}</p>
+            )}
+          </div>
+
+          <div>
+            <label htmlFor="project-description" className="label">
+              Description
+            </label>
             <textarea
               id="project-description"
               className="input resize-none"
               rows={3}
               placeholder="What's this project about?"
-              {...register('description')}
+              {...register("description")}
             />
           </div>
 
@@ -105,9 +140,9 @@ export function ProjectModal({ onClose, onSubmit, initial }: Props) {
               {isSubmitting ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : initial ? (
-                'Save changes'
+                "Save changes"
               ) : (
-                'Create project'
+                "Create project"
               )}
             </button>
           </div>

@@ -13,7 +13,14 @@ import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-
 import { CSS } from '@dnd-kit/utilities';
 import { TaskCard } from './TaskCard';
 import { TaskModal } from './TaskModal';
-import type { Task, User, Status } from '../../types';
+import { useToast } from '../../context/ToastContext';
+import type { Task, User, Status, Priority } from '../../types';
+
+const PRIORITY_WEIGHT: Record<Priority, number> = {
+  high: 3,
+  medium: 2,
+  low: 1,
+};
 
 const COLUMNS: { id: Status; label: string; color: string }[] = [
   { id: 'todo', label: 'To Do', color: 'bg-slate-400' },
@@ -66,6 +73,7 @@ export function TaskBoard({
   const [modalOpen, setModalOpen] = useState(false);
   const [defaultStatus, setDefaultStatus] = useState<Status>('todo');
   const [activeId, setActiveId] = useState<string | null>(null);
+  const { showToast } = useToast();
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -109,7 +117,10 @@ export function TaskBoard({
       <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {COLUMNS.map((col) => {
-            const colTasks = tasks.filter((t) => t.status === col.id);
+            const colTasks = tasks
+              .filter((t) => t.status === col.id)
+              .sort((a, b) => PRIORITY_WEIGHT[b.priority] - PRIORITY_WEIGHT[a.priority]);
+            
             return (
               <div
                 key={col.id}
@@ -174,11 +185,17 @@ export function TaskBoard({
         <TaskModal
           task={editTask}
           members={members}
+          defaultStatus={defaultStatus}
+          projectId={projectId}
           onClose={() => setModalOpen(false)}
           onSave={
             editTask
               ? (payload) => onUpdateTask(editTask.id, payload)
-              : (payload) => onCreateTask({ ...payload, status: defaultStatus, project_id: projectId })
+              : async (payload) => {
+                  const task = await onCreateTask({ ...payload, status: defaultStatus, project_id: projectId });
+                  showToast({ title: 'Task created successfully', linkTo: `/tasks/${task.task_key}`, linkLabel: 'Open task' });
+                  return task;
+                }
           }
           onDelete={editTask ? onDeleteTask : undefined}
         />
