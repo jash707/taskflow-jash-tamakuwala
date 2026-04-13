@@ -1,73 +1,66 @@
-# React + TypeScript + Vite
+# TaskFlow — Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React 19 + TypeScript + Vite frontend for the TaskFlow project management app. All API calls are intercepted by MSW (Mock Service Worker) — no real backend is required.
 
-Currently, two official plugins are available:
+## Getting Started
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```bash
+# Install dependencies
+npm install
 
-## React Compiler
+# Copy environment file
+cp .env.example .env   # or create .env manually (see below)
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+# Start the dev server
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+The app will be available at **http://localhost:5173**.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Environment Variables
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+Create a `.env` file in this folder with:
+
+```env
+VITE_API_BASE_URL=http://localhost:4000
+```
+
+This is the base URL Axios uses for all requests. Because MSW intercepts at the Service Worker level, no server actually needs to be running at that address during development.
+
+## Available Scripts
+
+| Command | Description |
+|---|---|
+| `npm run dev` | Start Vite dev server with HMR |
+| `npm run build` | Type-check and produce a production bundle in `dist/` |
+| `npm run preview` | Serve the production bundle locally |
+| `npm run lint` | Run ESLint across all source files |
+
+## Project Structure
+
+```
+src/
+├── assets/           Static assets
+├── components/
+│   ├── layout/       Navbar, Layout wrapper
+│   ├── projects/     ProjectCard, ProjectModal
+│   └── tasks/        TaskBoard, TaskCard, TaskModal
+├── context/          AuthContext, ToastContext
+├── hooks/            useAuth, useProjects, useTasks
+├── lib/              Axios instance (JWT interceptor)
+├── mocks/            MSW browser worker, handlers, in-memory db
+├── pages/            LoginPage, RegisterPage, ProjectsPage,
+│                     ProjectDetailPage, TaskDetailPage
+└── types/            Shared TypeScript interfaces
+```
+
+## How the Mock API Works
+
+MSW is registered as a Service Worker in development (`main.tsx` calls `worker.start()` before mounting React). Every `axios` request is intercepted by the handlers in `src/mocks/handlers.ts` and resolved against the in-memory data in `src/mocks/db.ts`.
+
+**The mock resets on every hard reload.** Use the seeded test account to avoid re-registering:
+
+```
+Email:    test@example.com
+Password: password123
 ```
