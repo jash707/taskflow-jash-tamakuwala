@@ -3,7 +3,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { LogOut, CheckSquare, Moon, Sun, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { TaskModal } from "../tasks/TaskModal";
-import { useToast } from "../../context/ToastContext";
+import { useToast } from "../../hooks/useToast";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { users } from "../../mocks/db";
 import api from "../../lib/axios";

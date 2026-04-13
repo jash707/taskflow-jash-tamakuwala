@@ -1,7 +1,7 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { CheckSquare, AlertCircle } from 'lucide-react';
 import { useState } from 'react';
@@ -15,9 +15,11 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>;
 
 export function LoginPage() {
-  const { login } = useAuth();
+  const { login, token } = useAuth();
   const navigate = useNavigate();
   const [serverError, setServerError] = useState('');
+
+  if (token) return <Navigate to="/projects" replace />;
 
   const {
     register,
@@ -29,7 +31,7 @@ export function LoginPage() {
     setServerError('');
     try {
       await login(data.email, data.password);
-      navigate('/projects');
+      navigate('/projects', { replace: true });
     } catch (err) {
       if (axios.isAxiosError(err)) {
         setServerError(err.response?.data?.error ?? 'Login failed. Please try again.');

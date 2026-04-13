@@ -1,31 +1,28 @@
 import * as Toast from '@radix-ui/react-toast';
-import { createContext, useContext, useState } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { X } from 'lucide-react';
-
-interface ToastOptions {
-  title: string;
-  description?: string;
-  linkTo?: string;
-  linkLabel?: string;
-}
-
-interface ToastContextType {
-  showToast: (options: ToastOptions) => void;
-}
-
-const ToastContext = createContext<ToastContextType | undefined>(undefined);
+import { ToastContext } from './ToastContextCore';
+import type { ToastOptions } from './ToastContextCore';
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const [toastData, setToastData] = useState<ToastOptions | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  function showToast(options: ToastOptions) {
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  const showToast = useCallback((options: ToastOptions) => {
     setToastData(options);
     setOpen(false);
-    setTimeout(() => setOpen(true), 50);
-  }
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setOpen(true), 50);
+  }, []);
 
   return (
     <ToastContext.Provider value={{ showToast }}>
@@ -72,8 +69,3 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useToast() {
-  const context = useContext(ToastContext);
-  if (!context) throw new Error('useToast must be used within ToastProvider');
-  return context;
-}

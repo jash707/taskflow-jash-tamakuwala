@@ -13,7 +13,7 @@ import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-
 import { CSS } from '@dnd-kit/utilities';
 import { TaskCard } from './TaskCard';
 import { TaskModal } from './TaskModal';
-import { useToast } from '../../context/ToastContext';
+import { useToast } from '../../hooks/useToast';
 import type { Task, User, Status, Priority } from '../../types';
 
 const PRIORITY_WEIGHT: Record<Priority, number> = {
